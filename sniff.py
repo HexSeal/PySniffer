@@ -38,10 +38,28 @@ def IPv4_packet():
     version = version_header_length >> 4
     # Find the header length, because the data comes directly after the header
     header_length = (version_header_length & 15) * 4
-    # Disect the packet into variables
+    # Disect the packet into variables, the data is in protocol
     ttl, proto, src, target = struct.unpack('! 8x B B 2x 4s 4s', data[:20])
     return version, header_length, ttl, proto, ipv4(src), ipv4(target)
 
 # Returns formatted IPv4 address
 def ipv4_format(address):
     return '.'.join(map(str, address))
+
+# Unpack the ICMP packet
+def icmp_packet(data):
+    icmp_type, code, checksum = struct.unpack('! B B H', data[:4])
+    return icmp_type, code, checksum, data[4:]
+
+# Unpack the TCP segment.
+def tcp_seg(data):
+    (src_port, dest_port, sequence, acknowledgement, offset_reserved) = struct.unpack('! H H L L H', data[:14])
+    # We have to unpack the offset and reserve in a weird way because they are part of the same segment
+    offset = (offset_reserved_flags >> 12) * 4
+    flag_urg = (offset_reserved_flags & 32) >> 5
+    flag_ack = (offset_reserved_flags & 16) >> 4
+    flag_psh = (offset_reserved_flags & 8) >> 3
+    flag_rst = (offset_reserved_flags & 4) >> 2
+    flag_syn = (offset_reserved_flags & 2) >> 1
+    flag_fin = offset_reserved_flags & 1
+    return src_port, dest_port, sequence, acknowledgement, flag_urg, flag_ack, flag_psh, flag_rst, flag_syn, flag_fin, data[offset:] 
