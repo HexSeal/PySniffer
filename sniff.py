@@ -2,6 +2,17 @@ import socket
 import struct
 import textwrap
 
+# Tabs for visual hierarchy when processing network data
+TAB_1 = '\t - '
+TAB_2 = '\t\t - '
+TAB_3 = '\t\t\t - '
+TAB_4 = '\t\t\t\t - '
+
+DATA_TAB_1 = '\t '
+DATA_TAB_2 = '\t\t '
+DATA_TAB_3 = '\t\t\t '
+DATA_TAB_4 = '\t\t\t\t '
+
 def main():
     # Get the raw socket data and format with nhtohs
     connection = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
@@ -13,6 +24,62 @@ def main():
         dest_mac, src_mac, eth_protocol, data = ethernet_frame(raw_data)
         print('\nEthernet Frame:')
         print('Destination: {}, Source: {}, Protocol:{}'.format(dest_mac, src_mac, eth_proto)) 
+        
+        # 8 for IPv4
+        if eth_protocol == 8:
+            (version, header_length, ttl, proto, src, target, data) = ipv4_packet(data)
+            print(TAB_1 + 'IPv4 Packet:')
+            print(TAB_2 + 'Version: {}, Header Length: {}, TTL: {}'.format(version, header_length, ttl))
+            print(TAB_2 + 'Protocol: {}, Source: {}, Target: {}'.format(proto, src, target))
+            
+            # 1 = ICMP packet
+            if proto == 1:
+                icmp_type, code, checksum, data = icmp_packet(data)
+                print(TAB_1 + 'ICMP Packet: ')
+                print(TAB_2 + 'Type: {}, Code: {}, Checksum: {},'.format(icmp_type, code, checksum))
+                print(TAB_2 + 'Data: ')
+                print(format_multi_line(DATA_TAB_3, data))
+            
+            # TCP
+            # TCP
+            elif proto == 6:
+                src_port, dest_port, sequence, acknowledgment, flag_urg, flag_ack, flag_psh, flag_rst, flag_syn, flag_fin = struct.unpack(
+            '! H H L L H H H H H H', raw_data[:24])
+                print(TAB_1 + 'TCP Segment:')
+                print(TAB_2 + 'Source Port: {}, Destination Port: {}'.format(src_port, dest_port))
+                print(TAB_2 + 'Sequence: {}, Acknowledgment: {}'.format(sequence, acknowledgment))
+                print(TAB_2 + 'Flags:')
+                print(TAB_3 + 'URG: {}, ACK: {}, PSH: {}'.format(flag_urg, flag_ack, flag_psh))
+                print(TAB_3 + 'RST: {}, SYN: {}, FIN:{}'.format(flag_rst, flag_syn, flag_fin))
+
+                if len(data) > 0:
+                    # HTTP
+                    if src_port == 80 or dest_port == 80:
+                        print(TAB_2 + 'HTTP Data:')
+                        try:
+                            http = HTTP(data)
+                            http_info = str(http.data).split('\n')
+                            for line in http_info:
+                                print(DATA_TAB_3 + str(line))
+                        except:
+                            print(format_multi_line(DATA_TAB_3, data))
+                    else:
+                        print(TAB_2 + 'TCP Data:')
+                        print(format_multi_line(DATA_TAB_3, data))
+            # UDP
+            elif proto == 17:
+                src_port, dest_port, length, data = udp_segment(data)
+                print(TAB_1 + 'UDP Segment:')
+                print(TAB_2 + 'Source Port: {}, Destination Port: {}, Length: {}'.format(src_port, dest_port, length))
+
+            # Other IPv4
+            else:
+                print(TAB_1 + 'Other IPv4 Data:')
+                print(format_multi_line(DATA_TAB_2, data))
+
+        else:
+            print('Ethernet Data:')
+            print(format_multi_line(DATA_TAB_1, data))
 
 
 # Unpack an ethernet frame
@@ -62,4 +129,19 @@ def tcp_seg(data):
     flag_rst = (offset_reserved_flags & 4) >> 2
     flag_syn = (offset_reserved_flags & 2) >> 1
     flag_fin = offset_reserved_flags & 1
-    return src_port, dest_port, sequence, acknowledgement, flag_urg, flag_ack, flag_psh, flag_rst, flag_syn, flag_fin, data[offset:] 
+    return src_port, dest_port, sequence, acknowledgement, flag_urg, flag_ack, flag_psh, flag_rst, flag_syn, flag_fin, data[offset:]
+
+def udp_segment(data):
+    src_port, dest_port, size = struct.unpack('! H H 2x H', data[:8])
+    return src_port, dest_port, size, data[8:]
+
+# Formats multi-line data to make it more readable
+def format_multi_line(prefix, string, size=80):
+    size -= len(prefix)
+    if isinstance(string, bytes):
+        string = ''.join(r'\x{:02x}'.format(byte) for byte in string)
+        if size % 2:
+            size -= 1
+    return '\n'.join([prefix + line for line in textwrap.wrap(string, size)])
+
+main()
