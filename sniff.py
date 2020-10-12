@@ -14,7 +14,7 @@ DATA_TAB_3 = '\t\t\t '
 DATA_TAB_4 = '\t\t\t\t '
 
 def main():
-    # Get the raw socket data and format with nhtohs
+    # Get the raw socket data and format with ntohs
     connection = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
 
     # Listen for data moving across the network. 65536 is the max buffer size.
@@ -40,7 +40,6 @@ def main():
                 print(TAB_2 + 'Data: ')
                 print(format_multi_line(DATA_TAB_3, data))
             
-            # TCP
             # TCP
             elif proto == 6:
                 src_port, dest_port, sequence, acknowledgment, flag_urg, flag_ack, flag_psh, flag_rst, flag_syn, flag_fin = struct.unpack(
@@ -85,7 +84,7 @@ def main():
 # Unpack an ethernet frame
 def ethernet_frame(data):
     """Take an ethernet frame, unpack it and return the results in readable form."""
-    # '!' means we're treating it as network data. 6s means 6 bytes, the length of the MAC. H is an integer, and the data is collecting the first 14 bytes
+    # '!' means we're treating it as network data. 6s means 6 bytes, the length of the src and dest MAC. H is the type(2 bytes), for a total of the first 14 bytes
     dest_mac, src_mac, pack_type = struct.unpack('! 6s 6s H', data[:14])
     # htons converts the bytes based on compatible endianness
     return format_mac(dest_mac), format_mac(src_mac), socket.htons(pack_type), data[14:]
@@ -93,19 +92,19 @@ def ethernet_frame(data):
 # Return a properly formatted MAC address(AA:BB:CC:DD:EE:FF)
 def format_mac(byte_address):
     # Get the groups of bytes in the address, 2 each seperated by decimals. 
-    bytes_str = map('{:02x}'.format, byte_address)
+    bytes_str = b':'.join(["%02X"%(ord(x)) for x in byte_address])
     # Join the byte strings with a colon
     return ':'.join(bytes_str).upper()
 
 # Get the individual packet data
-def IPv4_packet():
+def IPv4_packet(data):
     # extract the version and the header length
     version_header_length = data[0]
     # bitshift the version by 4
     version = version_header_length >> 4
     # Find the header length, because the data comes directly after the header
     header_length = (version_header_length & 15) * 4
-    # Disect the packet into variables, the data is in protocol
+    # Dissect the packet into variables, the data is in protocol
     ttl, proto, src, target = struct.unpack('! 8x B B 2x 4s 4s', data[:20])
     return version, header_length, ttl, proto, ipv4(src), ipv4(target)
 
@@ -139,7 +138,7 @@ def udp_segment(data):
 def format_multi_line(prefix, string, size=80):
     size -= len(prefix)
     if isinstance(string, bytes):
-        string = ''.join(r'\x{:02x}'.format(byte) for byte in string)
+        string = ''.join(["%02X"%(ord(x)) for x in byte_address])
         if size % 2:
             size -= 1
     return '\n'.join([prefix + line for line in textwrap.wrap(string, size)])
