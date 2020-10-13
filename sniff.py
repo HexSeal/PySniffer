@@ -92,7 +92,7 @@ def ethernet_frame(data):
 # Return a properly formatted MAC address(AA:BB:CC:DD:EE:FF)
 def format_mac(byte_address):
     # Get the groups of bytes in the address, 2 each seperated by decimals. 
-    bytes_str = b':'.join(["%02X"%(ord(x)) for x in byte_address])
+    bytes_str = b':'.join(["%02X"%(ord(str(x))) for x in byte_address])
     # Join the byte strings with a colon
     return ':'.join(bytes_str).upper()
 
