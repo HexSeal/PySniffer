@@ -92,7 +92,7 @@ def ethernet_frame(data):
 # Return a properly formatted MAC address(AA:BB:CC:DD:EE:FF)
 def format_mac(byte_address):
     # Get the groups of bytes in the address, 2 each seperated by decimals. 
-    bytes_str = b':'.join(["%02X"%(ord(str(x))) for x in byte_address])
+    bytes_str = map('{:02x}'.format, byte_address)
     # Join the byte strings with a colon
     return ':'.join(bytes_str).upper()
 
@@ -138,7 +138,7 @@ def udp_segment(data):
 def format_multi_line(prefix, string, size=80):
     size -= len(prefix)
     if isinstance(string, bytes):
-        string = ''.join(["%02X"%(ord(x)) for x in byte_address])
+        string = ''.join(r'\x{:02x}'.format(byte) for byte in string)
         if size % 2:
             size -= 1
     return '\n'.join([prefix + line for line in textwrap.wrap(string, size)])
