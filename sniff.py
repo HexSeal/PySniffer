@@ -23,11 +23,11 @@ def main():
         # Store the raw data 
         dest_mac, src_mac, eth_protocol, data = ethernet_frame(raw_data)
         print('\nEthernet Frame:')
-        print('Destination: {}, Source: {}, Protocol:{}'.format(dest_mac, src_mac, eth_proto)) 
+        print('Destination: {}, Source: {}, Protocol:{}'.format(dest_mac, src_mac, eth_protocol)) 
         
         # 8 for IPv4
         if eth_protocol == 8:
-            (version, header_length, ttl, proto, src, target, data) = ipv4_packet(data)
+            (version, header_length, ttl, proto, src, target, data) = IPv4_packet(data)
             print(TAB_1 + 'IPv4 Packet:')
             print(TAB_2 + 'Version: {}, Header Length: {}, TTL: {}'.format(version, header_length, ttl))
             print(TAB_2 + 'Protocol: {}, Source: {}, Target: {}'.format(proto, src, target))
@@ -106,7 +106,7 @@ def IPv4_packet(data):
     header_length = (version_header_length & 15) * 4
     # Dissect the packet into variables, the data is in protocol
     ttl, proto, src, target = struct.unpack('! 8x B B 2x 4s 4s', data[:20])
-    return version, header_length, ttl, proto, ipv4(src), ipv4(target)
+    return version, header_length, ttl, proto, ipv4_format(src), ipv4_format(target)
 
 # Returns formatted IPv4 address
 def ipv4_format(address):
@@ -119,7 +119,7 @@ def icmp_packet(data):
 
 # Unpack the TCP segment.
 def tcp_seg(data):
-    (src_port, dest_port, sequence, acknowledgement, offset_reserved) = struct.unpack('! H H L L H', data[:14])
+    (src_port, dest_port, sequence, acknowledgement, offset_reserved_flags) = struct.unpack('! H H L L H', data[:14])
     # We have to unpack the offset and reserve in a weird way because they are part of the same segment
     offset = (offset_reserved_flags >> 12) * 4
     flag_urg = (offset_reserved_flags & 32) >> 5
