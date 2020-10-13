@@ -106,7 +106,7 @@ def IPv4_packet(data):
     header_length = (version_header_length & 15) * 4
     # Dissect the packet into variables, the data is in protocol
     ttl, proto, src, target = struct.unpack('! 8x B B 2x 4s 4s', data[:20])
-    return version, header_length, ttl, proto, ipv4_format(src), ipv4_format(target)
+    return version, header_length, ttl, proto, ipv4_format(src), ipv4_format(target), data[header_length:]
 
 # Returns formatted IPv4 address
 def ipv4_format(address):
